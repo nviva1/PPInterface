@@ -13,9 +13,6 @@ networkx==3.1
 numpy==1.24.4
 omegaconf==2.3.0
 pandas==2.0.3
-pdbfixer==1.9.0
-pymol==2.5.0
-pyrosetta==2023.33+release.9c16e13c3cc
 pytorch_lightning==1.8.6
 PyYAML==6.0.1
 PyYAML==6.0.2
