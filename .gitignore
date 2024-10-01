@@ -14,6 +14,7 @@ __pycache__/
 casp8_input
 gauss_adaptor.py
 PPInterface.egg-info
+update.sh
 
 # Distribution / packaging
 .Python
