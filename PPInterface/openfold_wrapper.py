@@ -24,6 +24,25 @@ from scipy.spatial import distance
 import json
 
 
+
+def download_weights():
+    Path("./data/").mkdir(exist_ok=True)
+    if not os.path.exists("./data/params_model_2_ptm.npz"):
+        commands = ["wget https://storage.googleapis.com/alphafold/alphafold_params_2021-07-14.tar",
+                    "tar xvf alphafold_params_2021-07-14.tar",
+                    "rm alphafold_params_2021-07-14.tar",
+                    "rm params_model_1.npz",
+                    "rm params_model_2.npz", 
+                    "rm params_model_3.npz", 
+                    "rm params_model_4.npz", 
+                    "rm params_model_5.npz", 
+                    "rm params_model_1_ptm.npz", 
+                    "rm params_model_3_ptm.npz", 
+                    "rm params_model_4_ptm.npz", 
+                    "rm params_model_5_ptm.npz"]
+        for c in commands:
+            subprocess.call(c, shell=True, cwd="./data/")
+
 class OpenFoldWraper:
     def __init__(
         self,
