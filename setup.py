@@ -6,13 +6,13 @@ def read_requirements():
         return f.read().splitlines()
 
 setup(
-    name='your-package-name',
+    name='PPInterface',
     version='0.1.0',
-    description='A description of your package',
+    description='TBA',
     long_description=open('README.md').read(),  # Optional: use README as long description
     long_description_content_type='text/markdown',
-    author='Your Name',
-    author_email='your.email@example.com',
+    author='Nikita Ivanisenko',
+    author_email='n.ivanisenko@gmail.com',
     url='https://github.com/username/your-repo',  # Replace with the actual repo URL
     packages=find_packages(),
     install_requires=read_requirements(),  # Load requirements from the file
