@@ -9,6 +9,7 @@ __pycache__/
 
 # C extensions
 *.so
+*~
 
 casp8_input
 gauss_adaptor.py
