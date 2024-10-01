@@ -1,0 +1,15 @@
+from setuptools import setup, find_packages
+
+setup(
+    name='PPInterface',
+    version='0.1',
+    description='To be announced',
+    author='Nikita Ivanisenko',
+    author_email='n.ivanisenko@gmail.com',
+    url='https://github.com/nviva1/PPInterface',
+    packages=find_packages(),
+    install_requires=[
+        'torch>=1.8.0',  # Add other dependencies here
+        #'numpy>=1.18.0'
+    ],
+)
