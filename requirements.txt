@@ -2,4 +2,4 @@ biotite==0.40.0
 biopandas
 biopython
 omegaconf
-git+chttps://github.com/Croydon-Brixton/proteinmpnn_wrapper@main
+proteinmpnn_wrapper @ git+https://github.com/Croydon-Brixton/proteinmpnn_wrapper@main
