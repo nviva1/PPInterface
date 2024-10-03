@@ -17,6 +17,7 @@ PPInterface.egg-info
 update.sh
 scripts.sh
 params_model_2_ptm.npz
+data
 
 # Distribution / packaging
 .Python

@@ -18,9 +18,8 @@ import numpy as np
 import transformers
 from pathlib import Path
 from transformers import EsmTokenizer, EsmForMaskedLM
-from PPInterface.openfold_wrapper import OpenFoldWraper
+from PPInterface.openfold_wrapper import OpenFoldWraper, download_weights
 import logging
-
 from PPInterface.sampler import MCSampler, MCState
 
 logger = logging.getLogger('ppi_logger')
@@ -67,6 +66,7 @@ def test_proteinmpnn_wrapper(config):
 
 
 def sample_sequences():
+
     ### Log config file
     config_file = OmegaConf.load("example/config.yaml")
     Path(config_file.paths.work_dir).mkdir(exist_ok=True)
@@ -78,9 +78,11 @@ def sample_sequences():
     ### Simple Monte-Carlo sampler with ProteinMPNN probabilities and OpenFold metrics
     mc_sampler = MCSampler(config=config_file, logger=logger)
     state = MCState(protein_design)
+
     for i in range(10):
         output = mc_sampler.singe_iteration(state)
         print(output)
+
 
     pass
 

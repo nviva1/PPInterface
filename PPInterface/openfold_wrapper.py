@@ -4,6 +4,8 @@ in the MSA free / template mode
 using the BioPandas dataframe as an input
 """
 
+import os
+import subprocess
 from pathlib import Path
 import sys
 import PPInterface.openfold.np.protein as protein

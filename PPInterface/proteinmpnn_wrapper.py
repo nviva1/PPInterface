@@ -346,7 +346,7 @@ def split_graph(
         nodes_pdb_numbering.append(nodes_pdb_numbering_)
         sel = " or ".join(sel)
         cmd.do(f"create nodes_{i}, {sel}")
-        print(nodes)
+        #print(nodes)
 
     cmd.do("set sphere_scale, 0.25, nodes_*")
 
@@ -428,8 +428,8 @@ class ProteinMPNNWrapper:
             seq_pred = "".join([seqs[i][j] for j in range(len(m_)) if m_[j] == 1])
             seq_true = "".join([seqs_true[i][j] for j in range(len(m_)) if m_[j] == 1])
 
-            print(seq_pred)
-            print(seq_true)
+            #print(seq_pred)
+            #print(seq_true)
 
             rec = [1 if s1 == s2 else 0 for s1, s2 in zip(seq_pred, seq_true)]
             recs.append(np.sum(rec) / len(rec))
@@ -561,9 +561,9 @@ class ProteinMPNNWrapper:
 
         t, backbone, randn = self.prepare_sampling_input(protein_input, **kwargs)
         decoding_order = torch.argsort(randn)
-        for i in decoding_order[0,:].numpy():
-            print(i,protein.iloc()[i]["design_mask"],
-                  protein.iloc()[i]["chain_id_original"])
+        #for i in decoding_order[0,:].numpy():
+        #    print(i,protein.iloc()[i]["design_mask"],
+        #          protein.iloc()[i]["chain_id_original"])
 
         design_mask = 1-torch.max(t["omit_AA_mask"], dim=2).values
         seq_design = "".join(
@@ -590,12 +590,6 @@ class ProteinMPNNWrapper:
                                       mask=design_mask
                                       )
         scores = self.score_seq(sample, t, randn=randn)
-        #print(design_mask)
-        #exit(0)
-        #print(scores["log_probs"].shape)
-        #print(design_mask.shape)
-        #print(scores["log_probs"][design_mask.bool()].shape)
-        #exit(0)
 
         return {"full_recovery": rec_1,
                "mask_recovery": rec_2,
@@ -612,7 +606,7 @@ def test():
 
     add_interface_mask_column(protein, chain="A")
     protein["design_mask"] = (protein["interface_mask"]) & (protein["chain_id_original"]=="A")
-    print(protein)
+    #print(protein)
 
     config = OmegaConf.load("../example/config.yaml")
     pw = ProteinMPNNWrapper(config)
