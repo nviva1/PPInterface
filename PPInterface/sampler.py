@@ -3,7 +3,7 @@ import random
 import math
 import numpy as np
 import os
-from PPInterface.protein_utils import load_protein, save_pdb, make_dummy_protein, get_sequence, mutate_protein, aa_3_to_1, \
+from PPInterface.protein_utils import load_protein, save_pdb, make_dummy_protein, prepare_optimization_input, get_sequence, mutate_protein, aa_3_to_1, \
     aa_1_to_3, kalign, mutate_protein_from_list
 from omegaconf import OmegaConf
 from abc import ABC, abstractmethod
@@ -44,14 +44,12 @@ class MCState:
         ### PDB dataframe but only with CA atoms
         self.protein_ca = self.protein[self.protein["atom_name"] == "CA"].reset_index(drop=True)
         self.protein_ca["aa_original"] = list(get_sequence(self.protein_ca))
-
         design_aa = "".join(list(self.protein_ca[self.protein_ca["design_mask"]]["aa_original"]))
 
         ### set state varible - current amino acid residues sequence
         self.state = design_aa
         self.pose = pose
         self.design_mask = self.protein_ca["design_mask"]
-
 
         ### set variable with chain id of subunit that can be designed
         sel = self.protein_ca["design_mask"]
@@ -63,7 +61,6 @@ class MCState:
         ### set variable with chain id of constant subunits
         self.non_design_chains = non_design_chains
         self.ddg = None
-
         ### openfold refined protein
         self.openfold_protein = None
 
@@ -80,7 +77,6 @@ class MCState:
             mutant_codes.append([s_old, residue_number, s_new])
             con = self.protein["residue_number"] == residue_number
             self.protein.loc[con, 'residue_name'] = aa_1_to_3[s_new]
-        pass
 
     def get_design_sequence(self):
         ### return full sequence of designable subunit
@@ -88,23 +84,27 @@ class MCState:
         pca = pca[pca["chain_id_original"] == self.design_chains]
         return get_sequence(pca), list(pca["design_mask"])
 
-
     def copy(self):
         ### make copy of the object
         new_obj = MCState(self.protein, self.pose)
         new_obj.state = self.state
         return new_obj
 
-class MonteCarloOptimizer():
+
+
+class MCSampler():
     """
     Implementation of ProteinMPNN probabilities guided MC algorithm
     """
-
     def __init__(self, config, **kwargs):
         self.rw = None
         ### use pyrosetta to calculate metrics
-        if config.metrics.rosetta:
-            self.rw = RosettaWrapper()
+        #if config.metrics.rosetta:
+        #    self.rw = RosettaWrapper()
+
+        self.logger = None
+        if 'logger' in kwargs:
+            self.logger = kwargs['logger']
 
         ### use openfold to calculate metrics
         if config.metrics.openfold:
@@ -117,9 +117,9 @@ class MonteCarloOptimizer():
 
         ### implement ESM LLM with 650M parameters
         ### in the next version consider using larger models
-        self.esm_device = "cpu"  # mps"
-        self.esm_tokenizer = EsmTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D")
-        self.esm_model = EsmForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D").to(self.esm_device)
+        #self.esm_device = "cpu"  # mps"
+        #self.esm_tokenizer = EsmTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D")
+        #self.esm_model = EsmForMaskedLM.from_pretrained("facebook/esm2_t33_650M_UR50D").to(self.esm_device)
 
     def pae_scores_from_openfold(self, protein, of_output):
         """
@@ -130,7 +130,6 @@ class MonteCarloOptimizer():
         :param of_output: openfold output
         :return:
         """
-
         protein_ca = protein[protein["atom_name"] == "CA"].reset_index(drop=True)
         ids = list(protein_ca[protein_ca["interface_mask"]].index)
         pae = of_output["predicted_aligned_error"]
@@ -139,8 +138,9 @@ class MonteCarloOptimizer():
         pae1 = np.average(pae[:, ids][other_chain_ids, :])
         pae2 = np.average(pae[ids, :][:, other_chain_ids])
         plddt = np.average(of_output["plddt"][ids])
-
-        return {"pae": np.average([pae1, pae2]),
+        ptm = of_output["predicted_tm_score"]
+        return {"ptm": ptm,
+                "pae": np.average([pae1, pae2]),
                 "plddt": plddt}
 
     def openfold_score(self, state):
@@ -150,37 +150,13 @@ class MonteCarloOptimizer():
         :param state: MCState object
         :return:
         """
-
         state.update_protein()
         of_output, out_per_cycle, pdb_df_pred1 = self.ow.inference_monomer(
             state.protein, ### PDB dataframe
             n_recycle=2 ### 2 is OK , but 1 cycle might be enough. further study should be carried out
         )
         state.openfold_protein = pdb_df_pred1
-        ### todo - add estimate of plddt change of the monomer in the future versions
-
         return self.pae_scores_from_openfold(state.protein, of_output)
-
-    def esm_score(self, state):  # sequence, design_mask):
-        sequence, design_mask = state.get_design_sequence()
-        """
-        in this implementation we evaluate pseudoperplexity score of the designed sequence
-        of the designed chain. 
-        The better idea could be to use ESM2-trained model that evaluates protein melting temperature
-        or ddG upon multiple mutations
-        However within this implementation we use this score
-        Code is borrowed from https://www.kaggle.com/code/daehunbae/esm-2-pseudo-perplexity-ranking
-        """
-        tensor_input = self.esm_tokenizer.encode(sequence, return_tensors='pt')
-        repeat_input = tensor_input.repeat(tensor_input.size(-1) - 2, 1)
-        mask = torch.ones(tensor_input.size(-1) - 1).diag(1)[:-2]
-        masked_input = repeat_input.masked_fill(mask == 1, self.esm_tokenizer.mask_token_id)
-        labels = repeat_input.masked_fill(masked_input != self.esm_tokenizer.mask_token_id, -100)
-        masked_input = masked_input[design_mask, :]
-        labels = labels[design_mask, :]
-        with torch.no_grad():
-            loss = self.esm_model(masked_input.to(self.esm_device), labels=labels.to(self.esm_device)).loss
-        return np.exp(loss.item())
 
     def update_pose(self, state):
         """
@@ -197,28 +173,28 @@ class MonteCarloOptimizer():
         design_residue_mask = state.protein_ca["design_mask"]
         mutant_codes = {}
         n = 0
-        design_chains = ",".join(list(set(state.protein_ca[design_residue_mask]["chain_id_original"])))
 
+        design_chains = ",".join(list(set(state.protein_ca[design_residue_mask]["chain_id_original"])))
         non_design_chains = [c for c in list(set(state.protein_ca[~design_residue_mask]["chain_id_original"])) if
                              c not in design_chains]
-
         non_design_chains = ",".join(non_design_chains)
 
-        temp_path = os.path.join(self.config.paths.temp_dir, "temp.pdb")
-        save_pdb(state.protein, temp_path)
-        state.pose = self.rw.load_pose(temp_path)
+        #temp_path = os.path.join(self.config.paths.temp_dir, "temp.pdb")
+        #Path(self.config.paths.temp_dir).mkdir(exist_ok=True)
+        #save_pdb(state.protein, temp_path)
+        #state.pose = self.rw.load_pose(temp_path)
 
         for r, res in state.protein_ca[design_residue_mask].groupby(
                 ["insertion", "residue_number_original", "chain_id_original"], sort=False):
             mutant_codes[r] = new_seq[n]
             n += 1
 
-        ddg = self.rw.mutate_interface_and_repack(state.pose,
-                                                  mutant_codes,
-                                                  chains_1=design_chains,
-                                                  chains_2=non_design_chains)
-        state.ddg = ddg
-        return ddg
+        #ddg = self.rw.mutate_interface_and_repack(state.pose,
+        #                                          mutant_codes,
+        #                                          chains_1=design_chains,
+        #                                          chains_2=non_design_chains)
+        #state.ddg = ddg
+        #return ddg
 
     def update_state(self, state_design,
                      new_seq):
@@ -228,7 +204,6 @@ class MonteCarloOptimizer():
         :param new_seq: new sequence
         :return:
         """
-
         s_new = state_design.copy()
         s_new.state = new_seq
         s_new.update_protein()
@@ -243,68 +218,72 @@ class MonteCarloOptimizer():
             :return:
         """
         state.ddg = {}
-        if self.config.metrics.rosetta:
-            ddg_new_design = self.update_pose(state)
-            state.ddg = {"rosetta_ddg_complex": ddg_new_design[0],
-                        "rosetta_ddg_monomer": ddg_new_design[1]}
+        #if self.config.metrics.rosetta:
+        #    ddg_new_design = self.update_pose(state)
+        #    state.ddg = {"rosetta_ddg_complex": ddg_new_design[0],
+        #                "rosetta_ddg_monomer": ddg_new_design[1]}
+
         if self.config.metrics.openfold:
             state.ddg.update(self.openfold_score(state))
-        state.ddg["esm2_loss"] = self.esm_score(state)
+
+        #state.ddg["esm2_loss"] = self.esm_score(state)
 
 
-    def single_guided_iteration(self,
-                            state_design,
-                            state_target,
-                            prefix=""):
+    def singe_iteration(self,
+                        state,
+                        prefix=""):
         """
         single step in the MC search and calculate of the objective function
         """
 
-        if state_design.ddg is None:
-            self.calculate_metrics(state_design)
-            self.calculate_metrics(state_target)
+        #if state_design.ddg is None:
+        #    self.calculate_metrics(state_design)
 
         ### predict new sequence
-        new_state_design, new_state_target = self.proposal_distribution(state_design,
-                                   state_target)
+        new_state = self.proposal_distribution(state)
 
         ### calculate metrics of new sequence
-        self.calculate_metrics(new_state_design)
-        self.calculate_metrics(new_state_target)
+        if state.ddg is None:
+            self.calculate_metrics(state)
+        self.calculate_metrics(new_state)
+        self.log(f"Metrics_old: {state.ddg}")
+        self.log(f"Metrics_new: {new_state.ddg}")
 
-        delta_pae = new_state_target.ddg["pae"]-state_target.ddg["pae"]
-        delta_plddt = new_state_target.ddg["plddt"]-state_target.ddg["plddt"]
-        objective_function_bad = delta_pae - delta_plddt
+        delta_ptm = new_state.ddg["ptm"] - state.ddg["ptm"]
+        delta_pae = new_state.ddg["pae"]-state.ddg["pae"]
+        delta_plddt = new_state.ddg["plddt"]-state.ddg["plddt"]
 
-        delta_pae = new_state_design.ddg["pae"]-state_design.ddg["pae"]
-        delta_plddt = new_state_design.ddg["plddt"]-state_target.ddg["plddt"]
-        objective_function_good = delta_pae - delta_plddt
+        design_residues = list(state.protein_ca[state.protein_ca["design_mask"]]["residue_number"])
 
-        design_residues = list(state_design.protein_ca[state_design.protein_ca["design_mask"]]["residue_number"])
+        wt_pdb_path = self.save_pdb(state, prefix=prefix+"wt_")
+        mt_pdb_path = self.save_pdb(new_state, prefix=prefix+"mutant_")
 
-        output = {"new_sequence":new_state_design.state,
-                  "old_sequence":state_design.state,
+        output = {"new_sequence":new_state.state,
+                  "old_sequence":state.state,
+                  "old_metrics":state.ddg,
+                  "new_metrics":new_state.ddg,
                   "residues":design_residues,
-                  "metrics_good_complex":new_state_design.ddg,
-                  "metrics_bad_complex":new_state_target.ddg
+                  "old_pdb_path":wt_pdb_path,
+                  "new_pdb_path":mt_pdb_path
                   }
 
-        ### oops it should be swapped
-        ### change next time
-        self.save_pdb(state_design, prefix=prefix+"good_wt_")
-        self.save_pdb(state_target, prefix=prefix+"bad_wt_")
-        self.save_pdb(new_state_design, prefix=prefix+"good_mutant_")
-        self.save_pdb(new_state_target, prefix=prefix+"bad_mutant_")
+        self.log(output)
 
-        return
+        output["new_state"] = new_state
+        output["old_state"] = state
 
+        return output
+
+    def log(self, m):
+        if self.logger is not None:
+            self.logger.info(m)
     def proposal_distribution(self, state_design):  # current_state):
         """
         Function to conduct ProteinMPNN guided proposal of the sequence changes
+
         We calculate probabilities of amino acid residues within PPI complexes
-        We want to have high probabilities of amino acid residues within the first complex - state_design
-        We want to have high probabilities of amino acid residues within the monomer subunit
-        We want to have low probabilities of amino acid residues within the second complex - state_target
+        We suggest some hits
+        Adaptor function to add
 
         :param state_design: MCState object for the PPI complex that we want to keep
         :param state_target: MCState object for the PPI complex that we want to break
@@ -314,30 +293,27 @@ class MonteCarloOptimizer():
 
         ### calculate probabilities using proteinmpnn for the designable chain in the good complex
         ### we use the non-standard decoder scheme (see sample_protein function)
+
         r_des = self.pw.sample_protein(state_design.protein,
-                                       state_design.design_chains)
-        probs = np.exp(r_des["log_probs"][0, ...].numpy())
+                                       design_chains=state_design.design_chains)
+
+        #probs = np.exp(r_des["log_probs"][0, ...].numpy())
+        probs = np.exp(r_des["log_probs"].numpy())
+
         ### probability of deletions should be zero
         probs[:, -1] *= 0
         q = 1 / np.sum(probs, axis=-1)[:, None]
         probs = probs * q
-        print(probs)
-        exit(0)
+
         ### within monte carlo simulation we randomly select the amino acid substitutions
         ### based on the probabilities
         cumulative_sum = np.cumsum(probs, axis=1)
         n_iter = 100
-        old_esm_score = self.esm_score(state_design)
 
         ###
-        ### Since we don't want to evaluate sequences that destabilizes the monomer
-        ### We use fast ESM2- based score to filter out such cases
-        ### AA shouldn't increase the pseudo-perplexity of the sequence
-        ### The effect of this step for the RBD should be evaluate in the future studies
-        ### For some proteins ESM2 perplexity is not very good predictor
+        ### Here should be fast adaptor function
         ###
-
-        delta_esm_score = 1
+        delta_esm_score = 1#-1
         n = 0
         while delta_esm_score > 0:
             ### repeate the random selection according to the ProteinMPNN probabilities of new aa
@@ -351,23 +327,27 @@ class MonteCarloOptimizer():
             new_seq = N_to_AA([ids])[0]
             new_state.state = new_seq
             new_state.update_protein()
+
             seq = new_state.get_design_sequence()
             old_seq = state_design.state
 
-            delta_esm_score = self.esm_score(new_state) - old_esm_score
+            ### here should be adaptor function
+            delta_esm_score = -1#self.esm_score(new_state) - old_esm_score
+            ###
 
             n += 1
-            print({"new_sequence": new_seq,
+            self.log({"new_sequence": new_seq,
                    "old_sequence": old_seq,
                    "delta_esm": delta_esm_score})
 
             if n > n_iter:
-                print("Can't find good esm score!")
+                self.log("Can't find good adaptor score!")
+                self.log("proceed with what it is")
                 break
+        return new_state
 
-        new_seq = new_state.state
-
-        return (self.update_state(state_design, new_seq))
+        #new_seq = new_state.state
+        #return (self.update_state(state_design, new_seq))
 
     def save_pdb(self, state, prefix=""):
         """
@@ -391,10 +371,4 @@ class MonteCarloOptimizer():
         d["aa_mutants"]=state.state
         json.dump(d, open(os.path.join(save_dir, prefix+".json"),'w'))
 
-
-def main():
-    pass
-
-if __name__ == "__main__":
-    main()
-
+        return os.path.join(save_dir, prefix+"_afold.pdb")

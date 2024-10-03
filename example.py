@@ -3,7 +3,7 @@ import random
 import math
 import numpy as np
 import os
-from PPInterface.protein_utils import load_protein, save_pdb, make_dummy_protein, get_sequence, mutate_protein, aa_3_to_1, \
+from PPInterface.protein_utils import load_protein, save_pdb, prepare_optimization_input, get_sequence, mutate_protein, aa_3_to_1, \
     aa_1_to_3, kalign, mutate_protein_from_list
 from omegaconf import OmegaConf
 from abc import ABC, abstractmethod
@@ -11,7 +11,7 @@ from typing import Callable
 import torch
 import json
 from PPInterface.protein_utils import add_interface_mask_column
-from PPInterface.rosetta_wrapper import RosettaWrapper
+#from PPInterface.rosetta_wrapper import RosettaWrapper
 from PPInterface.proteinmpnn_wrapper import  AA_to_N, N_to_AA, ProteinMPNNWrapper
 import pandas as pd
 import numpy as np
@@ -21,29 +21,12 @@ from transformers import EsmTokenizer, EsmForMaskedLM
 from PPInterface.openfold_wrapper import OpenFoldWraper
 import logging
 
+from PPInterface.sampler import MCSampler, MCState
+
 logger = logging.getLogger('ppi_logger')
 logger.setLevel(logging.DEBUG)  # Set the logging level
 
 
-def prepare_optimization_tasks(config,
-                               design_id=0):
-
-    """
-    Prepare the protein dataframes for the monte carlo simulation
-    :param config:
-    :param design_id: ID of the cluster of amino acid residues for design
-    :return: protein dataframes for the good and bad coomplexes to design
-    """
-    ###  protein complex
-    protein_design = load_protein(config.design_task.protein_design)
-    ### chains to design within complex
-    design_chain = config.design_task.protein_design_chain
-    ### add interface_mask column to the complexes
-    add_interface_mask_column(protein_design, design_chain)
-    nodes_to_design = map(int,config.design_task.protein_design_residues.split(","))
-    protein_design["design_mask"] = (protein_design["residue_number_original"].isin(nodes_to_design)) & (
-                protein_design["chain_id_original"] == design_chain)
-    return protein_design
 
 
 def test_openfold_wrapper(config, protein):
@@ -61,6 +44,8 @@ def test_openfold_wrapper(config, protein):
     scores = ofr.get_ppi_metrics(protein, of_output, chain_id=config.design_task.protein_design_chain)
     logger.info(f"Scores: {scores}")
 
+
+
 def prepare_logger(config):
     file_handler = logging.FileHandler(os.path.join(config.paths.work_dir, 'logfile.log'))
     file_handler.setLevel(logging.DEBUG)
@@ -72,16 +57,35 @@ def prepare_logger(config):
     logger.addHandler(console_handler)
 
 
-def main():
+def test_proteinmpnn_wrapper(config):
+    pw = ProteinMPNNWrapper(config)
+    protein_design = prepare_optimization_input(config)
+    r_des = pw.sample_protein(protein_design,
+                              chain_id_design=config.design_task.protein_design_chain)
+    print(r_des)
+    exit(0)
+
+
+def sample_sequences():
+    ### Log config file
     config_file = OmegaConf.load("example/config.yaml")
     Path(config_file.paths.work_dir).mkdir(exist_ok=True)
     prepare_logger(config_file)
-    protein_design = prepare_optimization_tasks(config_file)
-    test_openfold_wrapper(config_file, protein_design)
 
-    #print(protein_design)
+    ### Protein PDB dataframe with labeled interface and design residues
+    protein_design = prepare_optimization_input(config_file)
+
+    ### Simple Monte-Carlo sampler with ProteinMPNN probabilities and OpenFold metrics
+    mc_sampler = MCSampler(config=config_file, logger=logger)
+    state = MCState(protein_design)
+    for i in range(10):
+        output = mc_sampler.singe_iteration(state)
+        print(output)
+
     pass
 
+def main():
+    sample_sequences()
 
 if __name__ == "__main__":
     main()

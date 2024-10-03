@@ -13,7 +13,7 @@ import numpy as np
 ex3/ex4 might be added to improve performance
 flip_HNQ - is arguable parameter, better to investigate how it changes the perofrmance
 """
-pyrosetta.init("-ignore_unrecognized_res 1 -ex1 -ex2 -flip_HNQ")
+#pyrosetta.init("-ignore_unrecognized_res 1 -ex1 -ex2 -flip_HNQ")
 
 ### very bad standart to import *
 ### should be fixed in later editions

@@ -9,11 +9,11 @@ paths:
   pymol_log_dir: ./example/run1/pymol_logs/
   alphafold_weights_path: ./params_model_2_ptm.npz
 metrics:
-  rosetta: true
+  rosetta: false
   openfold: true
 design_task:
   adaptor_dataset: ./example/ds.csv
-  protein_design: ./example/test.pdb
+  protein_design: ./example/test_input.pdb
   protein_design_chain: B
-  protein_design_residues: 1,2,3,4,5
+  protein_design_residues: 233-237
 

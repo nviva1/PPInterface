@@ -1,7 +1,14 @@
 #
-To be announced soon 
+
+Exporing the sequence space on the protein-protein interaction interface using Monte-Carlo sampling based on probabilities derived from the ProteinMPNN and AlphaFold confidence metrics.
+Adaptor functions to be implemented
 
 
+Code and weights for ProteinMPNN and ProteinMPNN wrappers are obtained from the repositories:
+https://github.com/dauparas/ProteinMPNN
+https://github.com/Croydon-Brixton/proteinmpnn_wrapper
+
+Code for OpenFold was adapted from https://github.com/aqlaboratory/openfold
 
 # License and Disclaimer
 

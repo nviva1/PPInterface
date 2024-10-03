@@ -42,6 +42,43 @@ aa_3_to_1 = {
 aa_1_to_3 = {v: k for k, v in aa_3_to_1.items()}
 
 
+def parse_ranges(s):
+    result = []
+    # Split the string by commas
+    s = s.replace(" ","")
+    parts = s.split(',')
+    for part in parts:
+        # Check if the part contains a range (indicated by '-')
+        if '-' in part:
+            start, end = map(int, part.split('-'))
+            result.extend(range(start, end + 1))  # Add the range of numbers
+        else:
+            result.append(int(part))  # Add individual number
+
+    return result
+
+def prepare_optimization_input(config):
+    """
+    Prepare the protein dataframes for the monte carlo simulation
+    :param config:
+    :param design_id: ID of the cluster of amino acid residues for design
+    :return: protein dataframes for the good and bad coomplexes to design
+    """
+    ###  protein complex
+    protein_design = load_protein(config.design_task.protein_design)
+    ### chains to design within complex
+    design_chain = config.design_task.protein_design_chain
+    ### add interface_mask column to the complexes
+    add_interface_mask_column(protein_design, design_chain)
+    #nodes_to_design = map(int, config.design_task.protein_design_residues.split(","))
+    nodes_to_design = parse_ranges(config.design_task.protein_design_residues)
+
+    protein_design["design_mask"] = (protein_design["residue_number_original"].isin(nodes_to_design)) & (
+            protein_design["chain_id_original"] == design_chain)
+
+    return protein_design
+
+
 def save_pdb(pdb_df, output_name, original_numbering=True):
     """
     :param pdb_df: pdb dataframe
