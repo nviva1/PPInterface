@@ -47,7 +47,7 @@ setup(
     #    'git+https://github.com/Croydon-Brixton/proteinmpnn_wrapper.git'
     #],
     install_requires=read_requirements(),  # Automatically install packages from requirements.txt
-    cmdclass={#
-        'install': PostInstallCommand,
-    },
+    #cmdclass={#
+    #    'install': PostInstallCommand,
+    #},
 )
