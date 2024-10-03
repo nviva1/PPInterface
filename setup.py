@@ -9,8 +9,8 @@ class PostInstallCommand(install):
     
     def run(self):
         # First, run the normal install process
-        install.run(self)
-        
+        #install.run(self)
+        self.do_egg_install()        
         # Get the absolute path to the 'proteinmpnn_wrapper' folder
         current_dir = os.path.abspath(os.path.dirname(__file__))
         submodule_dir = os.path.join(current_dir, 'proteinmpnn_wrapper')
