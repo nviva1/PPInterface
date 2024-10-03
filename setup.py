@@ -44,7 +44,7 @@ setup(
         "biopandas",
         "biopython",
         "omegaconf",
-        "proteinmpnn_wrapper @ git+https://github.com/Croydon-Brixton/proteinmpnn_wrapper.git"
+        'git+https://github.com/Croydon-Brixton/proteinmpnn_wrapper.git'
     ],
     #install_requires=read_requirements(),  # Automatically install packages from requirements.txt
     #cmdclass={#
