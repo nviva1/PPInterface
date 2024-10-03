@@ -1,4 +1,8 @@
 from setuptools import setup, find_packages
+from setuptools.command.install import install
+import subprocess
+import os
+
 
 # Read dependencies from requirements.txt
 def read_requirements():
