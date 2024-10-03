@@ -11,6 +11,7 @@ __pycache__/
 *.so
 *~
 
+all_requirements.txt
 casp8_input
 gauss_adaptor.py
 PPInterface.egg-info
