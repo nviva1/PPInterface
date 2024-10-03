@@ -18,6 +18,7 @@ update.sh
 scripts.sh
 params_model_2_ptm.npz
 data
+temp
 
 # Distribution / packaging
 .Python
