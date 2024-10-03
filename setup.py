@@ -38,7 +38,13 @@ setup(
     name='PPInterface',
     version='0.1',
     packages=find_packages(),
-    install_requires=read_requirements(),  # Automatically install packages from requirements.txt
+    install_requires=[
+        "biotite==0.40.0",
+        "biopandas",
+        "biopython",
+        "omegaconf"
+    ],
+    #install_requires=read_requirements(),  # Automatically install packages from requirements.txt
     cmdclass={
         'install': PostInstallCommand,
     },
