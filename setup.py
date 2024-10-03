@@ -9,7 +9,7 @@ class PostInstallCommand(install):
    
    def run(self):
        # First, run the normal install process
-       self.do_egg_install()       
+       #self.do_egg_install()       
        install.run(self)
 
        # Get the absolute path to the 'proteinmpnn_wrapper' folder
