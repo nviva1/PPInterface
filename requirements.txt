@@ -1,4 +1,0 @@
-biotite==0.40.0
-biopandas
-biopython
-omegaconf
