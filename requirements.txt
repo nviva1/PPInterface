@@ -1,7 +1,4 @@
-# requirements.txt
 biotite==0.40.0
 biopandas
 biopython
 omegaconf
-git+https://github.com/Croydon-Brixton/proteinmpnn_wrapper.git
-
