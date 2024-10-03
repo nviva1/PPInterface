@@ -23,7 +23,6 @@ class PostInstallCommand(install):
     def run(self):
         # First, run the normal install process
         install.run(self)
-        
         # Then run your custom command
         try:
             # Change directory to 'proteinmpnn_wrapper'
@@ -51,9 +50,9 @@ setup(
         'Operating System :: OS Independent',
     ],
     python_requires='>=3.7',  # Specify the minimum Python version
-#    cmdclass={
-#        'install': PostInstallCommand,
-#        }
+    cmdclass={
+        'install': PostInstallCommand,
+        }
 )
 
 
