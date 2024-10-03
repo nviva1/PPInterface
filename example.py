@@ -66,6 +66,8 @@ def test_proteinmpnn_wrapper(config):
 
 
 def sample_sequences():
+    ### get alphafold weights
+    download_weights()
 
     ### Log config file
     config_file = OmegaConf.load("example/config.yaml")
