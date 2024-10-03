@@ -17,20 +17,30 @@ def read_requirements():
 #        # Continue with the installation
 #        install.run(self)
 
-
 class PostInstallCommand(install):
     """Post-installation for installation mode."""
+    
     def run(self):
         # First, run the normal install process
         install.run(self)
-        # Then run your custom command
-        try:
-            # Change directory to 'proteinmpnn_wrapper'
-            os.chdir('proteinmpnn_wrapper')
-            # Install the package in that directory
-            subprocess.check_call(['pip', 'install', '.'])
-        except Exception as e:
-            print(f"Error installing proteinmpnn_wrapper: {e}")
+        
+        # Get the absolute path to the 'proteinmpnn_wrapper' folder
+        current_dir = os.path.abspath(os.path.dirname(__file__))
+        submodule_dir = os.path.join(current_dir, 'proteinmpnn_wrapper')
+
+        # Check if the 'proteinmpnn_wrapper' directory exists
+        if os.path.isdir(submodule_dir):
+            try:
+                # Change directory to 'proteinmpnn_wrapper'
+                os.chdir(submodule_dir)
+                
+                # Install the package in 'proteinmpnn_wrapper'
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', '.'])
+                print("Successfully installed the proteinmpnn_wrapper package.")
+            except subprocess.CalledProcessError as e:
+                print(f"Error during installation of proteinmpnn_wrapper: {e}")
+        else:
+            print(f"'proteinmpnn_wrapper' directory not found at {submodule_dir}. Skipping installation.")
 
 setup(
     name='PPInterface',
