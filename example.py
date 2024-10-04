@@ -70,7 +70,7 @@ def sample_sequences():
     download_weights()
 
     ### Log config file
-    config_file = OmegaConf.load("example/config.yaml")
+    config_file = OmegaConf.load("example/config_complex.yaml")
     Path(config_file.paths.work_dir).mkdir(exist_ok=True)
     prepare_logger(config_file)
 

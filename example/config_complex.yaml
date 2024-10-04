@@ -1,0 +1,20 @@
+other_settings:
+  random_seed: 42
+  log_level: INFO
+  device: cpu
+  openfold_device: mps
+paths:
+  work_dir: ./example/run1/
+  temp_dir: ./example/run1/temp/
+  pymol_log_dir: ./example/run1/pymol_logs/
+  alphafold_weights_path: ./data/params_model_2_ptm.npz
+metrics:
+  rosetta: false
+  openfold: true
+design_task:
+  adaptor_dataset: ./example/ds.csv
+  protein_design: ./example/complex.pdb
+  protein_design_chain: B
+  protein_design_residues: 4,5,6,8,9
+  proteinmpnn_batchsize: 10
+
