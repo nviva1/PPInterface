@@ -37,7 +37,7 @@ class MCState:
 
         ### we remove sides chaines for the designable residues to avoid bias
         self.protein = protein.copy()
-        c1 = (self.protein["atom_name"].isin(["N", "C", "CA", "O", "CB"])) & (self.protein["design_mask"])
+        c1 = (self.protein["atom_name"].isin(["N", "C", "CA", "O"])) & (self.protein["design_mask"])
         c2 = (~self.protein["design_mask"])
         self.protein = self.protein[c1 | c2]
 
