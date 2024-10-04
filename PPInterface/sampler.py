@@ -11,7 +11,7 @@ from typing import Callable
 import torch
 import json
 from PPInterface.protein_utils import add_interface_mask_column
-from PPInterface.rosetta_wrapper import RosettaWrapper
+#from PPInterface.rosetta_wrapper import RosettaWrapper
 from PPInterface.proteinmpnn_wrapper import  AA_to_N, N_to_AA, ProteinMPNNWrapper
 import pandas as pd
 import numpy as np

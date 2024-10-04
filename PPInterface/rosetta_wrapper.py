@@ -5,7 +5,7 @@ import sys
 import pickle
 import shutil
 from pathlib import Path
-#import pyrosetta
+import pyrosetta
 import itertools
 import numpy as np
 
