@@ -20,6 +20,7 @@ scripts.sh
 params_model_2_ptm.npz
 data
 temp
+test_code.py
 
 # Distribution / packaging
 .Python
